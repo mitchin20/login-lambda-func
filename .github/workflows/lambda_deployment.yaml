@@ -17,17 +17,35 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Step 1: Install dependencies into a separate 'package' directory
       - name: Install Dependencies
         run: |
           python -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -t ./package
           deactivate
 
-      - name: Create Deployment Package
-        run: zip -r lambda_deployment.zip lambda_function.py src
+      # Step 2: Copy Lambda function code, source files, and requirements.txt into 'package' directory
+      - name: Prepare Deployment Package
+        run: |
+          cp lambda_function.py ./package/
+          cp -r src ./package/
+          cp requirements.txt ./package/  # Copy requirements.txt to include it in the deployment package
 
+      # Step 3: Create the deployment ZIP file in the root directory
+      - name: Create Deployment Package
+        run: |
+          cd package
+          zip -r lambda_deployment.zip .  # Create ZIP file within 'package'
+          mv lambda_deployment.zip ../lambda_deployment.zip  # Move ZIP to root directory
+
+      # Step 4: Verify that the deployment ZIP file is in the root directory
+      - name: Verify Deployment Package
+        run: |
+          ls -l  # List files in the root directory to verify 'lambda_deployment.zip'
+
+      # Step 5: Deploy the Lambda function using AWS CLI
       - name: AWS CLI v2
         uses: imehedi/actions-awscli-v2@latest
         with:
